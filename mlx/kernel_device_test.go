@@ -87,6 +87,20 @@ func TestKernelDeviceTuning(t *testing.T) {
 			}
 		}
 	})
+	t.Run("relative_attention_bf16_probabilities", func(t *testing.T) {
+		for arch, want := range map[string]bool{
+			"applegpu_g14d": false,
+			"applegpu_g14s": false,
+			"applegpu_g15d": true,
+			"applegpu_g16s": true,
+			"applegpu_g17s": true,
+			"applegpu_g17d": true,
+		} {
+			if got := relativeAttentionBF16ProbabilitiesRuns(arch); got != want {
+				t.Errorf("%s: %t, want %t", arch, got, want)
+			}
+		}
+	})
 	t.Run("nvfp4_quantize", func(t *testing.T) {
 		// Values per thread for 8, 64 and 129 rows of 2304, then 8 rows of 1152.
 		for arch, want := range map[string][4]int{

@@ -10,8 +10,8 @@ import (
 
 func TestRelativePositionAttentionBF16Probabilities(t *testing.T) {
 	withMLXThread(t, func(t *mlxthreadtest.T) {
-		if !hasMetalTensorOps() {
-			t.Skip("requires Metal tensor ops")
+		if !hasMetalTensorOps() || !relativeAttentionBF16ProbabilitiesRuns(kernelArchitecture()) {
+			t.Skip("requires Metal tensor ops on M3 or later")
 		}
 		const queries, keys, width, window = 17, 273, 128, 176
 		const scale = 0.25
@@ -86,8 +86,8 @@ func TestRelativePositionAttentionBF16Probabilities(t *testing.T) {
 
 func TestRelativePositionAttentionBF16ProbabilitySink(t *testing.T) {
 	withMLXThread(t, func(t *mlxthreadtest.T) {
-		if !hasMetalTensorOps() {
-			t.Skip("requires Metal tensor ops")
+		if !hasMetalTensorOps() || !relativeAttentionBF16ProbabilitiesRuns(kernelArchitecture()) {
+			t.Skip("requires Metal tensor ops on M3 or later")
 		}
 		const queries, keys, width = 16, 1024, 128
 		q := Zeros(DTypeFloat32, 1, 1, queries, width)

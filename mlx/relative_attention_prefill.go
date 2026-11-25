@@ -101,6 +101,15 @@ bias[(pos.z * queries + pos.y) * keys + pos.x] = T(masked ? -INFINITY : shifted)
 `},
 }
 
+// relativeAttentionBF16ProbabilitiesRuns reports whether a device architecture
+// can run RelativePositionAttentionBF16Probabilities.
+func relativeAttentionBF16ProbabilitiesRuns(architecture string) bool {
+	generation, _ := appleGPU(architecture)
+	// M2 on macOS 26 fails to load this tensor-ops pipeline when it is
+	// evaluated; no fallback catches that.
+	return generation >= 15
+}
+
 // RelativePositionAttentionBF16Probabilities computes causal attention in reverse 128-key
 // blocks. It expects BF16 query values widened to FP32. The tensor operations accumulate
 // in FP32 and round the unnormalized probabilities to BF16 for the value product.
@@ -124,7 +133,7 @@ func RelativePositionAttentionBF16Probabilities(q, k, v, table, sink *Array, fir
 		!slices.Equal(sink.Dims()[:3], q.Dims()[:3]) || sink.Dim(3) != 1 {
 		return nil
 	}
-	if !hasMetalTensorOps() {
+	if !hasMetalTensorOps() || !relativeAttentionBF16ProbabilitiesRuns(kernelArchitecture()) {
 		return nil
 	}
 	leading := firstKey % width
