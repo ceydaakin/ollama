@@ -154,8 +154,7 @@ func GPUDevices(ctx context.Context, runners []ml.FilteredRunnerDiscovery) []ml.
 			wg.Add(1)
 			go func(i int) {
 				defer wg.Done()
-				extraEnvs := ml.GetDevicesEnv(devices[i : i+1])
-				devices[i].AddInitValidation(extraEnvs)
+				extraEnvs := verificationEnv(devices[i])
 				if len(bootstrapDevicesWithMetalRetry(ctx2ndPass, ctx, 30*time.Second, devices[i].LibraryPath, extraEnvs)) == 0 {
 					slog.Debug("filtering device which didn't fully initialize",
 						"id", devices[i].ID,
@@ -584,6 +583,17 @@ func runBootstrapDevicesWithStatusWatchdog(
 		slog.Warn("llama-server GPU discovery watchdog timed out", "OLLAMA_LIBRARY_PATH", ollamaLibDirs, "extra_envs", extraEnvs, "error", ctx.Err())
 		return nil, nil, ctx.Err()
 	}
+}
+
+// verificationEnv builds the environment for the second discovery pass.
+// device.ID is relative to the devices the user left visible, so it is mapped
+// back through the user's visible-devices list; otherwise the child would
+// replace e.g. CUDA_VISIBLE_DEVICES=1 with 0 and probe a different GPU.
+func verificationEnv(device ml.DeviceInfo) map[string]string {
+	remapFilterIDForUserVisibleDevices(&device)
+	env := ml.GetDevicesEnv([]ml.DeviceInfo{device})
+	device.AddInitValidation(env)
+	return env
 }
 
 func remapFilterIDForUserVisibleDevices(device *ml.DeviceInfo) {

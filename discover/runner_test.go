@@ -278,6 +278,39 @@ func TestRemapFilterIDForUserVisibleDevices(t *testing.T) {
 	}
 }
 
+func TestVerificationEnvHonorsUserVisibleDevices(t *testing.T) {
+	tests := []struct {
+		name string
+		env  string
+		want string
+	}{
+		{name: "numeric parent filter", env: "1", want: "1"},
+		{name: "uuid parent filter", env: "GPU-f3a94ab8-b31d-61ff-9fbb-ce91ac1cdd95", want: "GPU-f3a94ab8-b31d-61ff-9fbb-ce91ac1cdd95"},
+		{name: "no parent filter", want: "0"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("CUDA_VISIBLE_DEVICES", tt.env)
+			// The first pass ran with the user's filter, so the selected GPU is
+			// reported as ID 0 in the child.
+			device := ml.DeviceInfo{DeviceID: ml.DeviceID{Library: "CUDA", ID: "0"}}
+
+			env := verificationEnv(device)
+
+			if got := env["CUDA_VISIBLE_DEVICES"]; got != tt.want {
+				t.Fatalf("CUDA_VISIBLE_DEVICES = %q, want %q", got, tt.want)
+			}
+			if env["GGML_CUDA_INIT"] != "1" {
+				t.Fatalf("GGML_CUDA_INIT = %q, want 1", env["GGML_CUDA_INIT"])
+			}
+			if device.FilterID != "" {
+				t.Fatalf("verificationEnv mutated the caller's device: FilterID = %q", device.FilterID)
+			}
+		})
+	}
+}
+
 func TestNormalizeROCmDiscoveryEnv(t *testing.T) {
 	tests := []struct {
 		name        string
